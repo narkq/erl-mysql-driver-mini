@@ -7,7 +7,8 @@
 -export([init/7,
 	 fetch/2,
 	 quit/1,
-	 do_query_without_retrieve_rows/2
+	 do_query_without_retrieve_rows/2,
+	 do_query_without_retrieve_rows/3,
 	 quote/1,
 	 quote/2
 	]).
@@ -245,20 +246,22 @@ do_query(Conn, Query) ->
 	    {error, Code, Msg}
     end.
 
-do_query_without_retrieve_rows(Conn, Query) when is_record(Conn, connect) ->
+do_query_without_retrieve_rows(Conn, Query) ->
+	do_query_without_retrieve_rows(Conn, Query, fun(_) -> ok end).
+do_query_without_retrieve_rows(Conn, Query, Callback) when is_record(Conn, connect) ->
     Query1 = iolist_to_binary(Query),
     ?Log2((Conn#connect.log_fun), debug, "fetch ~p", [Query1]),
     Packet =  <<?MYSQL_QUERY_OP, Query1/binary>>,
     case do_send(Conn#connect{ seqnum = 0}, Packet) of
 	{ok, Conn2} ->
-	    get_query_response_without_retrieve_rows(Conn2);
+	    get_query_response_without_retrieve_rows(Conn2, Callback);
 	{error, Code, Reason} ->
 	    Msg = io_lib:format("Failed sending data "
 			"on socket: ~w: ~p",
 			[Code, Reason]),
 	    {error, Code, Msg}
     end;
-do_query_without_retrieve_rows(Conn, _Query) ->
+do_query_without_retrieve_rows(Conn, _Query, _CB) ->
 	exit(io_lib:format("[~w] Conn is not record #connect: ~p~n", [self(), Conn])).
 
 do_queries(Conn, Queries) when not is_list(Queries) ->
@@ -328,7 +331,7 @@ get_query_response(Conn) ->
 	    {error, Code, #mysql_result{error=Reason}}
     end.
 
-get_query_response_without_retrieve_rows(Conn) ->
+get_query_response_without_retrieve_rows(Conn, Callback) ->
     ?Log2((Conn#connect.log_fun), debug, "get_query_response. connect: ~p", [Conn]),
     case do_recv(Conn) of
 	{ok, Conn2, Packet} ->
@@ -347,7 +350,7 @@ get_query_response_without_retrieve_rows(Conn) ->
 		    %% Tabular data received
 		    case get_fields(Conn2, []) of
 			{ok, Conn3, Fields} ->
-			    case retrieve_rows(Fields, Conn3) of
+			    case retrieve_rows(Fields, Conn3, Callback) of
 				{ok, Conn4} ->
 					{empty_data, Conn4};
 				    %{data, Conn4, #mysql_result{fieldinfo=Fields, rows=Rows}};
@@ -458,15 +461,20 @@ get_rows(Fields, Conn, Res) ->
     end.
 
 % retrieve but do not return rows
-retrieve_rows(Fields, Conn) ->
+retrieve_rows(Fields, Conn, Callback) ->
+	retrieve_rows(Fields, Conn, Callback, []).
+
+retrieve_rows(Fields, Conn, Callback, CbState) ->
     case do_recv(Conn) of
 	{ok, Conn2, Packet} ->
 	    case Packet of
 		<<254:8, Rest/binary>> when size(Rest) < 8 ->
+			Callback(flush, CbState),
 		    {ok, Conn2};
 		_ ->
-		    {ok, _This} = get_row(Fields, Packet, []),
-		    retrieve_rows(Fields, Conn2)
+		    {ok, Row} = get_row(Fields, Packet, []),
+			CbState2 = Callback(Row, CbState),
+		    retrieve_rows(Fields, Conn2, Callback, CbState2)
 	    end;
 	Error -> Error
     end.
