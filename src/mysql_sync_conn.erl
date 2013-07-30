@@ -168,7 +168,7 @@ mysql_init(Conn, User, Password) ->
 					?Log2(LogFun, error, "init unknown error ~p",
 					  [binary_to_list(RecvPacket)]),
 
-					{error, binary_to_list(RecvPacket)};
+					{error, 0, binary_to_list(RecvPacket)};
 				{error, Code, Reason} ->
 					?Log2(LogFun, error,
 					  "init failed receiving data : ~p", [Reason]),
