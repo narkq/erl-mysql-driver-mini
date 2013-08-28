@@ -173,8 +173,8 @@ mysql_init(Conn, User, Password) ->
 					?Log2(LogFun, error,
 					  "init failed receiving data : ~p", [Reason]),
 					{error, Code, Reason}
-					end
-			end;
+			end
+		end;
 	{error, Code, Reason} ->
 		{error, Code, Reason}
 	end.
