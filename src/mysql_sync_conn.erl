@@ -5,6 +5,7 @@
 %% External exports
 %%--------------------------------------------------------------------
 -export([init/7,
+	 init/6,
 	 fetch/2,
 	 quit/1,
 	 do_query/2,
@@ -40,6 +41,9 @@
 -define(RECV_TIMEOUT, 600000).
 
 %%%	Conn :== mysql_sync_recv:#state
+
+init(Host, Port, User, Password, Database, LogFun) ->
+	init(Host, Port, User, Password, Database, LogFun, undefined, ?RECV_TIMEOUT).
 
 init(Host, Port, User, Password, Database, LogFun, Encoding) ->
 	init(Host, Port, User, Password, Database, LogFun, Encoding, ?RECV_TIMEOUT).
