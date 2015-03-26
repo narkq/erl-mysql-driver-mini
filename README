@@ -1,0 +1,3 @@
+Minimal MySQL client.
+
+Based on https://github.com/chernomor/erlang-mysql-driver
