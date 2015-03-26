@@ -1,0 +1,14 @@
+{application, erl_mysql_driver_mini,
+ [
+  {description, "Minimal MySQL client."},
+  {vsn, "1"},
+  {modules, [
+             erl_mysql_driver_mini
+            ]},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]}.
