@@ -142,8 +142,8 @@ mysql_init(Conn, User, Password) ->
 	case do_recv(Conn) of
 	{ok, Conn2, Packet} ->
 		case greeting(Packet, LogFun) of
-		{error, Reason} ->
-			{error, Reason} ;
+		{error, Code, Reason} ->
+			{error, Code, Reason} ;
 		{ok, Version, Salt1, Salt2, Caps} ->
 			?Log2(LogFun, debug, "Connection: ~p", [Conn2]),
 			AuthRes =
