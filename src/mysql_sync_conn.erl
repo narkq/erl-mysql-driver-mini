@@ -7,6 +7,7 @@
 -export([init/7,
 	 fetch/2,
 	 quit/1,
+	 do_query/2,
 	 do_query_without_retrieve_rows/2,
 	 do_query_without_retrieve_rows/3,
 	 quote/1,
