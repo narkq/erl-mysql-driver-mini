@@ -511,10 +511,10 @@ get_lcb(<<253:8, Value:24/little, Rest/binary>>) ->
     {Value, Rest};
 get_lcb(<<254:8, Value:32/little, Rest/binary>>) ->
     {Value, Rest};
-get_lcb(<<Value:8, Rest/binary>>) when Value < 251 ->
-    {Value, Rest};
 get_lcb(<<255:8, Rest/binary>>) ->
-    {255, Rest}.
+    {255, Rest};
+get_lcb(<<Value:8, Rest/binary>>) ->
+    {Value, Rest}.
 
 
 %%--------------------------------------------------------------------
