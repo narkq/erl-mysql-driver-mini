@@ -1,3 +1,6 @@
 Minimal MySQL client.
 
 Based on https://github.com/chernomor/erlang-mysql-driver
+
+https://dev.mysql.com/doc/internals/en/client-server-protocol.html - MySQL Client/Server Protocol
+
