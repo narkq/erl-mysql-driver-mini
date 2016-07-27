@@ -252,7 +252,7 @@ do_query(Conn, Query) ->
     end.
 
 do_query_without_retrieve_rows(Conn, Query) ->
-	do_query_without_retrieve_rows(Conn, Query, fun(_) -> ok end).
+	do_query_without_retrieve_rows(Conn, Query, fun(_Row, State) -> State end).
 do_query_without_retrieve_rows(Conn, Query, Callback) when is_record(Conn, connect) ->
     Query1 = iolist_to_binary(Query),
     ?Log2((Conn#connect.log_fun), debug, "fetch ~p", [Query1]),
