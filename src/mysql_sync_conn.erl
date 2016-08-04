@@ -163,7 +163,7 @@ mysql_init(Conn, User, Password) ->
 			case AuthRes of
 				{ok, Conn3, <<0:8, _Rest/binary>>} ->
 					{ok, Conn3#connect { mysql_version = Version } };
-				{ok, _Conn3, <<255:8, Code:16/little, Message/binary>>, _RecvNum} ->
+				{ok, _Conn3, <<255:8, Code:16/little, Message/binary>>} ->
 					?Log2(LogFun, error, "init error ~p: ~p",
 					 [Code, binary_to_list(Message)]),
 
