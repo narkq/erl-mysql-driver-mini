@@ -37,8 +37,7 @@ init(Host, Port, LogFun, RecvTimeout) ->
 			   {"init: Failed connecting to ~p:~p : ~p",
 				[Host, Port, E]}
 		   end),
-		Msg = lists:flatten(io_lib:format("connect failed : ~p", [E])),
-		{error, cannot_connect, Msg}
+		{error, cannot_connect, E}
 	end
 .
 
