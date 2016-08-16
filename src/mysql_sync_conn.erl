@@ -476,6 +476,8 @@ retrieve_rows(Fields, Conn, Callback, CbState) ->
 		<<254:8, Rest/binary>> when size(Rest) < 8 ->
 			Callback(flush, CbState),
 		    {ok, Conn2};
+		<<255:8, ErrCode:16/little, "#", _SqlState:40/bytes, Reason/binary>> ->
+			{error, ErrCode, #mysql_result{error=Reason}};
 		_ ->
 		    {ok, Row} = get_row(Fields, Packet, []),
 			CbState2 = Callback(Row, CbState),
