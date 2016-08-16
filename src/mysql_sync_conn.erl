@@ -359,6 +359,8 @@ get_query_response_without_retrieve_rows(Conn, Callback) ->
 				{ok, Conn4} ->
 					{empty_data, Conn4};
 				    %{data, Conn4, #mysql_result{fieldinfo=Fields, rows=Rows}};
+				{query_error, Conn4, Code, Reason} ->
+					{query_error, Conn4, Code, #mysql_result{error=Reason}};
 				{error, Code, Reason} ->
 				    {error, Code, #mysql_result{error=Reason}}
 			    end;
@@ -477,7 +479,7 @@ retrieve_rows(Fields, Conn, Callback, CbState) ->
 			Callback(flush, CbState),
 		    {ok, Conn2};
 		<<255:8, ErrCode:16/little, "#", _SqlState:40/bytes, Reason/binary>> ->
-			{error, ErrCode, #mysql_result{error=Reason}};
+			{query_error, Conn2, ErrCode, #mysql_result{error=Reason}};
 		_ ->
 		    {ok, Row} = get_row(Fields, Packet, []),
 			CbState2 = Callback(Row, CbState),
