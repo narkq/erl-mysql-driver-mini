@@ -73,8 +73,8 @@ do_new_auth(Conn, User, Password, Salt1, Salt2) ->
 	Packet2 = make_new_auth(User, Auth, none),
 	Conn2 = do_send(Conn, Packet2),
 	case mysql_sync_conn:do_recv(Conn2) of
-	{error, unknown, Reason} ->
-		{error, unknown, Reason};
+	{error, Code, Reason} ->
+		{error, Code, Reason};
 	{ok, Conn3, Packet3} ->
 		case Packet3 of
 		<<254:8>> ->
