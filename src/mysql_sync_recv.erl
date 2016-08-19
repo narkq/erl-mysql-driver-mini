@@ -56,8 +56,8 @@ read(State) ->
 				0 -> IntState;
 				_ ->
 					IntState#connect {
-						wait_time = timer:now_diff(erlang:now(),
-							IntState#connect.query_started),
+						wait_time = erlang:monotonic_time(micro_seconds) -
+							IntState#connect.query_started,
 						query_started = 0
 					}
 			end,

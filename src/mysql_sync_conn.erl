@@ -203,7 +203,7 @@ do_send(Conn, Packet) when is_binary(Packet) ->
     case gen_tcp:send(Conn#connect.socket, Data) of
 		ok ->
 			{ok, Conn#connect{ seqnum = Conn#connect.seqnum + 1,
-				query_started = erlang:now() } };
+				query_started = erlang:monotonic_time(micro_seconds) } };
 		{error, Reason} ->
 			{error, send_error, Reason}
 	end.
