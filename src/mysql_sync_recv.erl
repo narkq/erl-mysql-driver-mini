@@ -31,7 +31,7 @@ init(Host, Port, LogFun, RecvTimeout) ->
 			log_fun = LogFun,
 			recv_timeout = RecvTimeout
 		})};
-	E ->
+	{error, E} ->
 		LogFun(?MODULE, ?LINE, error,
 		   fun() ->
 			   {"init: Failed connecting to ~p:~p : ~p",
