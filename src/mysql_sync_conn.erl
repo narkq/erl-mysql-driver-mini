@@ -54,35 +54,13 @@ init(Host, Port, User, Password, Database, LogFun, Encoding, Timeout) ->
 		%io:format("init:Connect: ~p~n", [Conn]),
 		case mysql_init(Conn, User, Password) of
 		{ok, Conn2} ->
-			Db = iolist_to_binary(Database),
-			case do_query(Conn2, <<"use ", Db/binary>>) of
-			{query_error, Conn3, Code, MySQLRes} ->
-				?Log2( (Conn3#connect.log_fun), error,
-				 "mysql_conn: Failed changing to database "
-				 "~p : (~w) ~p",
-				 [Database, Code,
-				  get_result_reason(MySQLRes)]),
-				{query_error, Conn3, Code, failed_changing_database};
-
-			{error, Code, MySQLRes} ->
-				?Log2( (Conn2#connect.log_fun), error,
-				 "mysql_conn: cannot select database "
-				 "~p : (~w) ~p",
-				 [Database, Code,
-				  get_result_reason(MySQLRes)]),
-				{error, Code, failed_changing_database};
-
-			%% ResultType: data | updated
-			{_ResultType, Conn3, _MySQLRes} ->
-				Conn5 = case Encoding of
-					undefined -> Conn3;
-					_ ->
-						EncodingBinary = list_to_binary(atom_to_list(Encoding)),
-						{_ResultType, Conn4, _MySQLRes} = do_query(Conn3,
-							<<"set names '", EncodingBinary/binary, "'">>),
-						Conn4
-				end,
-				{ok, Conn5}
+			case change_db(Conn2, Database) of
+				{ok, Conn3} ->
+					case set_encoding(Conn3, Encoding) of
+						{ok, Conn4} -> {ok, Conn4};
+						Error -> Error
+					end;
+				Error -> Error
 			end;
 		{error, Code, Reason} ->
 			{error, Code, Reason}
@@ -661,3 +639,32 @@ quote([26 | Rest], Acc) ->
 quote([C | Rest], Acc) ->
 	quote(Rest, [C | Acc]).
 
+change_db(Conn, <<>>) -> {ok, Conn};
+change_db(Conn, Db) when is_list(Db) -> change_db(Conn, iolist_to_binary(Db));
+change_db(Conn, Db) ->
+	Query = <<"use ", Db/binary>>,
+	QueryResult = do_query(Conn, Query),
+	handle_initial_query_result(QueryResult, Conn, Query, failed_changing_database).
+
+set_encoding(Conn, undefined) -> {ok, Conn};
+set_encoding(Conn, Encoding) when is_list(Encoding) -> set_encoding(Conn, iolist_to_binary(Encoding));
+set_encoding(Conn, Encoding) when is_atom(Encoding) -> set_encoding(Conn, atom_to_binary(Encoding, utf8));
+set_encoding(Conn, Encoding) ->
+	Query = <<"set names '", Encoding/binary, "'">>,
+	QueryResult = do_query(Conn, Query),
+	handle_initial_query_result(QueryResult, Conn, Query, failed_setting_encoding).
+
+handle_initial_query_result({query_error, Conn, Code, MySQLRes}, _Conn, Query, Reason) ->
+	log_initial_query_error(Conn, Query, MySQLRes, Code),
+	{query_error, Conn, Code, Reason};
+handle_initial_query_result({error, Code, MySQLRes}, Conn, Query, Reason) ->
+	log_initial_query_error(Conn, Query, MySQLRes, Code),
+	{error, Code, Reason};
+%% ResultType: data | updated
+handle_initial_query_result({_ResultType, Conn, _MySQLRes}, _Conn, _Db, _Reason) -> {ok, Conn}.
+
+log_initial_query_error(Conn, Query, MySQLRes, Code) ->
+	?Log2( (Conn#connect.log_fun), error,
+	 "mysql_conn: initial query '~p' failed : "
+	 "(~w) ~p",
+	 [Query, Code, get_result_reason(MySQLRes)]).
