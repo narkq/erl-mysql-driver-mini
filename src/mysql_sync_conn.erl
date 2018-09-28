@@ -28,6 +28,8 @@
 -define(MYSQL_4_0, 40). %% Support for MySQL 4.0.x
 -define(MYSQL_4_1, 41). %% Support for MySQL 4.1.x et 5.0.x
 
+-define(MYSQL_SERVER_MORE_RESULTS_EXISTS, 8).
+
 %% Used by transactions to get the state variable for this connection
 %% when bypassing the dispatcher.
 -define(STATE_VAR, mysql_connection_state).
@@ -356,9 +358,11 @@ get_query_response_without_retrieve_rows(Conn, Callback) ->
 		    case get_fields(Conn2, []) of
 			{ok, Conn3, Fields} ->
 			    case retrieve_rows(Fields, Conn3, Callback) of
-				{ok, Conn4} ->
+				{ok, Conn4, no_more_results} ->
 					{empty_data, Conn4};
 				    %{data, Conn4, #mysql_result{fieldinfo=Fields, rows=Rows}};
+				{ok, Conn4, have_more_results} ->
+					get_query_response_without_retrieve_rows(Conn4, Callback);
 				{query_error, Conn4, Code, Reason} ->
 					{query_error, Conn4, Code, #mysql_result{error=Reason}};
 				{error, Code, Reason} ->
@@ -475,9 +479,14 @@ retrieve_rows(Fields, Conn, Callback, CbState) ->
     case do_recv(Conn) of
 	{ok, Conn2, Packet} ->
 	    case Packet of
+		<<254:8, _Warnings:16/little-unsigned-integer, StatusFlags:16/little-unsigned-integer>>
+		  when Conn2#connect.mysql_version == ?MYSQL_4_1 ->
+			HaveMore = do_we_have_more_results(StatusFlags),
+			Callback(HaveMore, CbState),
+			{ok, Conn2, HaveMore};
 		<<254:8, Rest/binary>> when size(Rest) < 8 ->
-			Callback(flush, CbState),
-		    {ok, Conn2};
+			Callback(no_more_results, CbState),
+			{ok, Conn2, no_more_results};
 		<<255:8, ErrCode:16/little, "#", _SqlState:40/bytes, Reason/binary>> ->
 			{query_error, Conn2, ErrCode, #mysql_result{error=Reason}};
 		_ ->
@@ -487,6 +496,12 @@ retrieve_rows(Fields, Conn, Callback, CbState) ->
 	    end;
 	Error -> Error
     end.
+
+do_we_have_more_results(StatusFlags) ->
+	case StatusFlags band ?MYSQL_SERVER_MORE_RESULTS_EXISTS of
+		?MYSQL_SERVER_MORE_RESULTS_EXISTS -> have_more_results;
+		0 -> no_more_results
+	end.
 
 %% part of get_rows/4
 get_row([], _Data, Res) ->
