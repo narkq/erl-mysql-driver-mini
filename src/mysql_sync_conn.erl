@@ -21,6 +21,7 @@
 -include("mysql_conn.hrl").
 -include("mysql.hrl").
 
+-define(SUPPORTS_PROTOCOL_41, 512).
 -define(SECURE_CONNECTION, 32768).
 -define(MYSQL_QUIT_OP, 1).
 -define(MYSQL_QUERY_OP, 3).
@@ -148,7 +149,7 @@ mysql_init(Conn, User, Password) ->
 		case greeting(Packet, LogFun) of
 		{error, Code, Reason} ->
 			{error, Code, Reason} ;
-		{ok, Version, Salt1, Salt2, Caps} ->
+		{ok, _Version, Salt1, Salt2, Caps} ->
 			?Log2(LogFun, debug, "Connection: ~p", [Conn2]),
 			AuthRes =
 			case Caps band ?SECURE_CONNECTION of
@@ -159,10 +160,14 @@ mysql_init(Conn, User, Password) ->
 					%io:format("do mysql_sync_auth:do_old_auth~n"),
 					mysql_sync_auth:do_old_auth( Conn2, User, Password, Salt1)
 			end,
+			ProtocolVersion = case Caps band ?SUPPORTS_PROTOCOL_41 of
+				?SUPPORTS_PROTOCOL_41 -> ?MYSQL_4_1;
+				0 -> ?MYSQL_4_0
+			end,
 			?Log2(LogFun, debug, "AuthRes: ~p", [AuthRes]),
 			case AuthRes of
 				{ok, Conn3, <<0:8, _Rest/binary>>} ->
-					{ok, Conn3#connect { mysql_version = Version } };
+					{ok, Conn3#connect { mysql_version = ProtocolVersion } };
 				{ok, _Conn3, <<255:8, Code:16/little, Message/binary>>} ->
 					?Log2(LogFun, error, "init error ~p: ~p",
 					 [Code, binary_to_list(Message)]),
